@@ -1,0 +1,116 @@
+---
+title: "Figure 1:The effect of the number of sequences on alignment accuracy of standard and regressive alignemnts"
+output: html_notebook
+---
+
+Note: This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+## Description of Datasets
+The starting datsets are the 94 families of the HomFam protein sequences.
+
+See Data Generation Workflow for steps to reproduce the datasets used in this analysis.
+
+For each family and for each "number of sequences", 10 datasets where generated.
+
+These datasets can be download from [here]().
+
+### ClustalO Standard Alignments 
+
+These alignment where generated with the following command:
+
+```{bash}
+clustalo --infile=${datasetID}.${size}.${rep}.fa 
+         --outfmt=fa 
+         --force 
+         -o ${datasetID}.${size}.${rep}.aln
+```
+
+### ClustalO Regressive Alignments
+
+These alignment where generated with the following command:
+
+```{bash}
+t_coffee -dpa -dpa_method clustalo_msa \
+         -dpa_tree ${guide_tree} \
+         -seq ${seqs} \
+         -dpa_nseq ${bucket_size} \
+         -outfile ${id}.${size}.${rep}.dpa.${bucket_size}.${align_method}.with.${tree_method}.tree.aln
+```
+
+### ClustalO Guide Trees
+
+All guide trees for each dataset were generated using the following command:
+
+```{bash}
+clustalo -i ${seqs} --guidetree-out "${id}.${tree_method}.${size}.${rep}.dnd"
+```
+
+The same tree was used for the DPA tree and Standard ClustalO guide tree for each dataset.
+
+
+## Data Generation Workflow 
+The data used in this analysis was generated from a [Nextflow]() workflow.
+
+<div style="width:100px; height:20px">
+![](https://github.com/nextflow-io/trademark/raw/master/nextflow2014_no-bg.png)
+</div> 
+
+Nextflow is a framework that enables portable and reproducible workflows.
+
+You can find the GitHub respository for the workflow [here](https://github.com/skptic/embeded-analysis-nf/tree/master/templates)
+
+You can to generate the data yourself with the following steps:
+
+```{bash}
+# Download Nextflow
+wget -qO- https://get.nextflow.io | bash
+
+# Run the example dataset
+./nextflow run skptic/embeded-analysis-nf
+```
+
+## R Data Analysis
+
+* Prerequisites: Install and load packages
+```{r} 
+install.packages("plotly", repos="http://cran.rstudio.com/", dependencies=TRUE)
+library(plotly)
+```
+
+
+* Step 1: Import the alignment datasets
+```{r}
+clustalo_std_raw <- read.csv("~/Downloads/heatmap_data_clustalo_std.csv", row.names=1)
+clustalo_reg_raw <- read.csv("~/Downloads/heatmap_data_clustalo_dpa.csv", row.names=1)
+```
+
+* Step 2: Display the ClustalO Standard Alignment Dataset
+```{r}
+clustalo_std_raw
+```
+
+* Step 3: Display the ClustalO Regressive Alignment Dataset
+```{r}
+clustalo_reg_raw
+```
+
+* Step 4: Normalise both datasets by the first coloumn and thentranspose
+```{r}
+clustalo_std_norm=apply(clustalo_std_raw, 1, function(x){x/x[1]})
+clustalo_std_norm_t=t(clustalo_std_norm)
+
+clustalo_reg_norm=apply(clustalo_reg_raw, 1, function(x){x/x[1]})
+clustalo_reg_norm_t=t(clustalo_reg_norm)
+```
+
+
+
+* Step 5 Plot the ClustalO Standard Alignment Scores: 
+```{r}
+plot_ly(x=colnames(clustalo_std_norm_t), y=rownames(clustalo_std_norm_t), z = clustalo_std_norm_t, type = "heatmap") %>% layout(yaxis = list(autorange = "reversed"))
+```
+
+* Step 5 Plot the ClustalO Regressive Alignment Scores: 
+```{r}
+plot_ly(x=colnames(clustalo_reg_norm_t), y=rownames(clustalo_reg_norm_t), z = clustalo_reg_norm_t, type = "heatmap") %>% layout(yaxis = list(autorange = "reversed"))
+```
